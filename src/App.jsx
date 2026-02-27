@@ -54,9 +54,9 @@ const MILESTONES = [
 
 function MilestoneToast({ milestone, onClose }) {
   const [visible, setVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setVisible(true), 50); const t = setTimeout(() => { setVisible(false); setTimeout(onClose, 400); }, 5000); return () => clearTimeout(t); }, [onClose]);
+  useEffect(() => { setTimeout(() => setVisible(true), 50); const t = setTimeout(() => { setVisible(false); setTimeout(onClose, 400); }, 3000); return () => clearTimeout(t); }, [onClose]);
   return (
-    <div style={{ position:"fixed",top:80,left:32,zIndex:1000,maxWidth:380,padding:"16px 20px",borderRadius:16,background:"rgba(15,23,42,0.95)",border:`1px solid ${milestone.color}30`,backdropFilter:"blur(20px)",boxShadow:`0 8px 32px ${milestone.color}20`,transform:visible?"translateY(0)":"translateY(20px)",opacity:visible?1:0,transition:"all 0.4s cubic-bezier(.4,0,.2,1)",display:"flex",alignItems:"flex-start",gap:14 }}>
+    <div style={{ position:"fixed",top:80,right:16,zIndex:1000,maxWidth:380,padding:"16px 20px",borderRadius:16,background:"rgba(15,23,42,0.95)",border:`1px solid ${milestone.color}30`,backdropFilter:"blur(20px)",boxShadow:`0 8px 32px ${milestone.color}20`,transform:visible?"translateY(0)":"translateY(20px)",opacity:visible?1:0,transition:"all 0.4s cubic-bezier(.4,0,.2,1)",display:"flex",alignItems:"flex-start",gap:14 }}>
       <div style={{ width:44,height:44,borderRadius:12,flexShrink:0,background:`${milestone.color}15`,border:`1px solid ${milestone.color}25`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22 }}>{milestone.icon}</div>
       <div style={{ flex:1 }}><div style={{ fontSize:11,fontWeight:700,color:milestone.color,textTransform:"uppercase",letterSpacing:1,marginBottom:4 }}>Milestone Reached!</div><div style={{ fontSize:13,color:"#e2e8f0",lineHeight:1.5 }}>{milestone.msg}</div></div>
       <button onClick={() => { setVisible(false); setTimeout(onClose, 400); }} style={{ background:"none",border:"none",color:"#475569",cursor:"pointer",fontSize:18,padding:0 }}>×</button>
@@ -378,6 +378,7 @@ function daysUntil(ds) { if(!ds) return Infinity; return Math.ceil((new Date(ds)
 function fmtDate(ds) { if(!ds) return "—"; const d=new Date(ds); return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }
 
 function DebtPayoff({ debts, setDebts, bills, setBills, compactMode, cleanMode, totalOrigDebt, calendarEnabled, onToggleCalendar, onSyncCalendar }) {
+  const [showGoogleAuth, setShowGoogleAuth] = useState(false);
   const [strategy, setStrategy] = useState("smart");
   const [extra, setExtra] = useState(200);
   const [debouncedExtra, setDebouncedExtra] = useState(200);
@@ -870,7 +871,7 @@ function DebtPayoff({ debts, setDebts, bills, setBills, compactMode, cleanMode, 
           <div style={{ fontSize:11,color:"#64748b",marginBottom:16 }}>
             {calendarEnabled ? "Your payment reminders are being synced." : "Automatically add payment due dates and reminders to your Google Calendar."}
           </div>
-          <button onClick={onToggleCalendar} style={{ padding:"12px 24px",borderRadius:10,background:calendarEnabled?"rgba(248,113,113,0.1)":"linear-gradient(135deg,#6ee7b7,#34d399)",border:calendarEnabled?"1px solid rgba(248,113,113,0.2)":"none",color:calendarEnabled?"#f87171":"#0f172a",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif" }}>
+          <button onClick={() => calendarEnabled ? onToggleCalendar() : (setShowGoogleAuth(true), window.open("https://accounts.google.com/o/oauth2/v2/auth?client_id=demo&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code&scope=https://www.googleapis.com/auth/calendar.events&access_type=offline", "_blank", "width=500,height=600,noopener"))} style={{ padding:"12px 24px",borderRadius:10,background:calendarEnabled?"rgba(248,113,113,0.1)":"linear-gradient(135deg,#6ee7b7,#34d399)",border:calendarEnabled?"1px solid rgba(248,113,113,0.2)":"none",color:calendarEnabled?"#f87171":"#0f172a",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif" }}>
             {calendarEnabled ? "Disconnect Calendar" : "Connect Google Calendar"}
           </button>
         </div>
@@ -893,6 +894,29 @@ function DebtPayoff({ debts, setDebts, bills, setBills, compactMode, cleanMode, 
           </div>
         )}
       </Card>
+      {showGoogleAuth&&<div style={{ position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.6)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(4px)" }} onClick={() => setShowGoogleAuth(false)}>
+        <div style={{ width:420,maxHeight:"80vh",borderRadius:16,background:"#0f172a",border:"1px solid rgba(255,255,255,0.1)",boxShadow:"0 20px 60px rgba(0,0,0,0.5)",overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+          <div style={{ padding:"16px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+            <div style={{ display:"flex",alignItems:"center",gap:8 }}><span style={{ fontSize:20 }}>{"\uD83D\uDCC5"}</span><span style={{ fontSize:14,fontWeight:700,color:"#e2e8f0" }}>Connect Google Calendar</span></div>
+            <button onClick={() => setShowGoogleAuth(false)} style={{ background:"none",border:"none",color:"#64748b",fontSize:18,cursor:"pointer",padding:"4px 8px" }}>{"\u00D7"}</button>
+          </div>
+          <div style={{ padding:20 }}>
+            <div style={{ textAlign:"center",padding:"20px 0" }}>
+              <div style={{ fontSize:13,color:"#94a3b8",marginBottom:16,lineHeight:1.6 }}>Sign in with your Google account to sync payment reminders and due dates to your calendar.</div>
+              <button onClick={() => { window.open("https://accounts.google.com/o/oauth2/v2/auth?client_id=demo&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code&scope=https://www.googleapis.com/auth/calendar.events&access_type=offline", "_blank", "width=500,height=600,noopener"); }} style={{ padding:"12px 28px",borderRadius:10,background:"#fff",border:"none",color:"#1a1a2e",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"inline-flex",alignItems:"center",gap:8,boxShadow:"0 2px 8px rgba(0,0,0,0.2)" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Sign in with Google
+              </button>
+              <div style={{ marginTop:16,fontSize:10,color:"#475569" }}>A Google sign-in window will open. After authorizing, return here.</div>
+            </div>
+            <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:16,marginTop:8 }}>
+              <div style={{ fontSize:11,color:"#64748b",marginBottom:8 }}>After signing in:</div>
+              <button onClick={() => { onToggleCalendar(); setShowGoogleAuth(false); }} style={{ width:"100%",padding:"10px 20px",borderRadius:10,background:"linear-gradient(135deg,#6ee7b7,#34d399)",border:"none",color:"#0f172a",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif" }}>I have signed in - Connect Calendar</button>
+              <button onClick={() => setShowGoogleAuth(false)} style={{ width:"100%",marginTop:8,padding:"10px 20px",borderRadius:10,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",color:"#94a3b8",fontSize:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif" }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>}
       <Card>
         <div style={{ fontSize:14,fontWeight:600,color:"#e2e8f0",marginBottom:4 }}>Upcoming Payment Events</div>
         <div style={{ fontSize:11,color:"#475569",marginBottom:16 }}>{calendarEvents.length} events to be synced</div>
@@ -1499,7 +1523,7 @@ const QUIZ_BANKS = {
   ],
 };
 
-function Learn({ onAcademyUnlock, academyUnlocked, cleanMode }) {
+function Learn({ onAcademyUnlock, academyUnlocked, cleanMode, onQuizComplete }) {
   const [quizActive, setQuizActive] = useState(false);
   const [qIdx, setQIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -1527,6 +1551,14 @@ function Learn({ onAcademyUnlock, academyUnlocked, cleanMode }) {
         const fs = score + (idx === questions[qIdx].correct ? 1 : 0);
         const pct = Math.round((fs/questions.length)*100);
         setQuizDone(true);
+        if (onQuizComplete) {
+          const tempH = [...history, { score:fs, total:questions.length, pct, level:activeLevel, variant:quizVariant }];
+          const tempLvlH = tempH.filter(r => r.level === activeLevel);
+          const tempDone = new Set(tempLvlH.map(r => r.variant));
+          const remaining = 4 - tempDone.size;
+          const willLevel = tempDone.size >= 4 && [0,1,2,3].map(v => Math.max(0,...tempLvlH.filter(r=>r.variant===v).map(r=>r.pct))).reduce((a,b)=>a+b,0)/4 >= 70;
+          onQuizComplete({ pct: pct, remaining: Math.max(0, remaining), leveledUp: willLevel, level: activeLevel });
+        }
         setHistory(h => {
           const nh = [...h, { score:fs, total:questions.length, pct, level:activeLevel, variant:quizVariant }];
           const lvlH = nh.filter(r => r.level === activeLevel);
@@ -1893,37 +1925,86 @@ function InvestingAcademy({ income, expenses, debts, savings, emergency, investm
 // ═══ MAIN APP ═══
 export default function FinancialPlanner() {
   const [tab, setTab] = useState("dashboard");
-  const [income, setIncome] = useState(5000);
-  const [expenses, setExpenses] = useState([
-    { name:"Rent",amount:1500,category:"Housing",id:1 },{ name:"Groceries",amount:400,category:"Food & Groceries",id:2 },
-    { name:"Car Payment",amount:350,category:"Transportation",id:3 },{ name:"Electricity",amount:120,category:"Utilities",id:4 },
-    { name:"Health Insurance",amount:200,category:"Healthcare",id:5 },{ name:"Streaming",amount:45,category:"Entertainment",id:6 },
-    { name:"Car Insurance",amount:150,category:"Insurance",id:7 },
-  ]);
-  const [debts, setDebts] = useState([
-    { name:"Credit Card",balance:5200,originalBalance:8000,rate:22.99,minPayment:150,id:10 },
-    { name:"Student Loan",balance:28000,originalBalance:35000,rate:5.5,minPayment:280,id:11 },
-    { name:"Car Loan",balance:12000,originalBalance:15000,rate:6.9,minPayment:350,id:12 },
-  ]);
-  const [savings, setSavings] = useState([
-    { name:"Vacation Fund",target:3000,saved:800,monthly:150,icon:"✈️",id:20 },
-    { name:"New Laptop",target:2000,saved:1200,monthly:200,icon:"💻",id:21 },
-  ]);
-  const [emergency, setEmergency] = useState({ months:6,target:16590,saved:4500,monthlyContribution:300 });
-  const [investments, setInvestments] = useState([
-    { name:"Vanguard S&P 500",ticker:"VOO",monthlyContribution:400,currentValue:8500,totalContributed:7200,returnRate:8,id:30 },
-    { name:"Total World ETF",ticker:"VT",monthlyContribution:200,currentValue:3200,totalContributed:3000,returnRate:7,id:31 },
-  ]);
+  const [income, setIncome] = useState(0);
+  const [expenses, setExpenses] = useState([]);
+  const [debts, setDebts] = useState([]);
+  const [savings, setSavings] = useState([]);
+  const [emergency, setEmergency] = useState({ months:6,target:0,saved:0,monthlyContribution:0 });
+  const [investments, setInvestments] = useState([]);
 
   const [toasts, setToasts] = useState([]);
   const [calendarEnabled, setCalendarEnabled] = useState(false);
-  const [totalOrigDebt, setTotalOrigDebt] = useState(58000);
-  const [bills, setBills] = useState([
-    { id:101, name:"Parking Fine", amount:120, sentDate:"2026-01-15", dueDate:"2026-03-10", urgency:2 },
-    { id:102, name:"Medical Bill", amount:450, sentDate:"2026-02-01", dueDate:"2026-04-01", urgency:1 },
-    { id:103, name:"Utility Arrears", amount:890, sentDate:"2025-10-01", dueDate:"2025-12-15", urgency:4 },
-  ]);
+  const [totalOrigDebt, setTotalOrigDebt] = useState(0);
+  const [bills, setBills] = useState([]);
   const [compactMode, setCompactMode] = useState(false);
+  const liteTabs = ["dashboard","expenses","debt","savings"];
+  const flashTab = (tabId) => { setTabFlash(tabId); setTimeout(() => setTabFlash(null), 2500); };
+  const setupSteps = [
+    { check: () => income > 0, page: "dashboard", msg: "First, set your monthly income.", done: "Income set! Ready for expenses?" },
+    { check: () => expenses.length > 0, page: "expenses", msg: "Now add your monthly expenses.", done: "Expenses added! Set up your emergency fund?" },
+    { check: () => emergency.target > 0, page: "emergency", msg: "Set your emergency fund target.", done: "Emergency fund started! Any debts to track?" },
+    { check: () => debts.length > 0 || setupOverrides["debt"], page: "debt", msg: "Add any debts you want to pay off.", done: "Debt plan active! Any savings goals?", skip: "No debt? Lucky you! Any savings goals?" },
+    { check: () => savings.length > 0 || setupOverrides["saving_skip"], page: "savings", msg: "Add your savings goals.", done: "Savings set! Any bills to track?", skip: "No goals yet? That is fine! Any bills?" },
+    { check: () => bills.length > 0 || setupOverrides["bills_skip"], page: "debt", msg: "Add any bills in your debt section.", done: "All set!" },
+  ];
+  const advanceSetupFlow = () => {
+    if (!setupFlow) return;
+    var step = setupFlowStep;
+    while (step < setupSteps.length && setupSteps[step].check()) step++;
+    if (step >= setupSteps.length) {
+      setCompanionMsg("Initial setup complete! Your financial picture is clear.");
+      setCompanionColor("purple"); setCompanionGlow(true); addToast2("Setup complete!");
+      setSetupFlow(null); setSetupFlowStep(0);
+      setTimeout(() => { setCompanionGlow(false); setCompanionColor("green"); setCompanionMsg("Tracking your progress. Keep going!"); }, 6000);
+      return;
+    }
+    setSetupFlowStep(step);
+    setCompanionMsg(setupSteps[step].msg);
+    setCompanionQ({ type:"setup_flow", page:setupSteps[step].page, yes:"Show me", no:step < 3 ? "Not now" : "Skip" });
+    setCompanionGlow(true); setTimeout(() => setCompanionGlow(false), 3000);
+  };
+  useEffect(() => {
+    if (!setupFlow || !initialized.current) return;
+    var step = setupSteps[setupFlowStep];
+    if (step && step.check()) {
+      var doneMsg = step.done || "Done! Next step?";
+      setCompanionMsg(doneMsg);
+      setCompanionColor("green"); setCompanionGlow(true);
+      setTimeout(() => { setCompanionGlow(false); advanceSetupFlow(); }, 2000);
+    }
+  }, [income, expenses.length, emergency.target, debts.length, savings.length, bills.length]);
+  const handleCompanionAsk = () => {
+    var q = companionInput.toLowerCase().trim();
+    setCompanionInput("");
+    if (!q) return;
+    if (q.includes("help") || q.includes("setup") || q.includes("start") || q.includes("what do i do") || q.includes("next") || q.includes("what now") || q.includes("guide")) {
+      setSetupFlow(true);
+      advanceSetupFlow();
+    } else if (q.includes("invest")) {
+      setCompanionMsg("Investing grows your wealth over time. Want to learn more?"); setCompanionQ({ type:"nav_page", page:"learn", yes:"Teach me", no:"Not now" });
+    } else if (q.includes("debt") || q.includes("loan")) {
+      setCompanionMsg("Managing debt is key to financial freedom. Check your debt plan?"); setCompanionQ({ type:"nav_page", page:"debt", yes:"Show me", no:"Not now" });
+    } else if (q.includes("save") || q.includes("emergency")) {
+      setCompanionMsg("Saving builds your safety net. Want to review your goals?"); setCompanionQ({ type:"nav_page", page:"savings", yes:"Show me", no:"Not now" });
+    } else if (q.includes("budget") || q.includes("spend")) {
+      setCompanionMsg("Budgeting gives you control. Want to review your split?"); setCompanionQ({ type:"nav_page", page:"budget", yes:"Show me", no:"Not now" });
+    } else if (q.includes("quiz") || q.includes("learn")) {
+      setCompanionMsg("Learning is power! Ready to test your knowledge?"); setCompanionQ({ type:"nav_page", page:"learn", yes:"Let's go", no:"Not now" });
+    } else {
+      setCompanionMsg("Try: 'help me setup', 'what do I do next', 'invest', 'debt', 'save', 'budget', or 'quiz'");
+    }
+  };
+  useEffect(() => {
+    if (compactMode && !liteTabs.includes(tab)) setTab("dashboard");
+  }, [compactMode]);
+  useEffect(() => {
+    if (tab === "learn" && !learnVisited) {
+      setLearnVisited(true);
+      setCompanionMsg("Welcome to the Learn page! Start with the Dictionary to build your knowledge, then test yourself with the quizzes.");
+      setCompanionColor("purple"); setCompanionGlow(true); setCompanionOpen(true);
+      setTimeout(() => { setCompanionGlow(false); setCompanionColor("green"); }, 5000);
+    }
+  }, [tab]);
   const [cleanMode, setCleanMode] = useState(false);
   const [currency, setCurrency] = useState("USD");
   const [budgetPreset, setBudgetPreset] = useState("50/30/20");
@@ -1990,8 +2071,9 @@ export default function FinancialPlanner() {
   const [companionMsg, setCompanionMsg] = useState("Welcome! Tracking your progress.");
   const [companionGlow, setCompanionGlow] = useState(false);
   const [companionQ, setCompanionQ] = useState(null);
+  const [companionVibrate, setCompanionVibrate] = useState(false);
   const [smartToasts, setSmartToasts] = useState([]);
-  const addToast2 = (msg) => { const id = Date.now(); setSmartToasts(p => [...p, {msg,id}]); setTimeout(() => setSmartToasts(p => p.filter(t => t.id!==id)), 4500); };
+  const addToast2 = (msg) => { const id = Date.now(); setSmartToasts(p => [...p, {msg,id}]); setTimeout(() => setSmartToasts(p => p.filter(t => t.id!==id)), 5500); };
   const addFeed2 = (text) => { setFeedItems(p => [{text, ts:Date.now()}, ...p].slice(0,8)); };
   useEffect(() => {
     if (prevFinLevel.current !== finState.level && initialized.current) {
@@ -2032,6 +2114,21 @@ export default function FinancialPlanner() {
   const prevEfRef = useRef(efPct);
   const prevSetupRef = useRef(setupPct);
   const [companionColor, setCompanionColor] = useState("green");
+  const funFacts = [
+    "Paying yourself first is the #1 habit of millionaires",
+    "Compound interest was called the 8th wonder of the world by Einstein",
+    "The 50/30/20 rule: 50% needs, 30% wants, 20% savings",
+    "Automating savings increases success rate by 80%",
+    "An emergency fund of 3-6 months expenses prevents 90% of financial crises",
+    "Every dollar of debt paid saves you more than a dollar in interest",
+    "Starting to invest 10 years earlier can double your retirement fund",
+    "People who track expenses save on average 15% more",
+    "The average millionaire has 7 income streams",
+    "A budget isn't restrictive. It gives you permission to spend guilt-free",
+    "Paying the minimum on credit cards can mean paying 3x the original amount",
+    "The best time to start investing was yesterday. The second best is today",
+  ];
+  const todayFact = funFacts[new Date().getDate() % funFacts.length];
   useEffect(() => {
     if (!initialized.current) return;
     const wasTd = prevTdRef.current;
@@ -2042,24 +2139,53 @@ export default function FinancialPlanner() {
     prevSetupRef.current = setupPct;
     // Debt fully cleared (balance went to 0 or all debts removed)
     if ((wasTd > 0 && td === 0) || (wasTd > 0 && debts.length === 0)) {
-      setCompanionMsg("Debt free! Want to start investing?");
-      setCompanionQ({ type: "invest_start", yes: "Yes, let's learn!", no: "Not yet" });
-      setCompanionColor("gold"); setCompanionGlow(true); setCompanionOpen(true);
       addFeed2("Debt free! Massive achievement."); addToast2("You are debt free!");
+      setCompanionColor("gold"); setCompanionGlow(true); setCompanionOpen(true);
+      if (efPct < 1) {
+        setCompanionMsg("Debt free! Build your emergency fund next?");
+        setCompanionQ({ type: "emergency_next", yes: "Yes, let's go!", no: "Not now" });
+      } else if (investments.length === 0) {
+        setCompanionMsg("Debt free! Ready to start investing?");
+        setCompanionQ({ type: "invest_start", yes: "Yes, let's learn!", no: "Not yet" });
+      } else {
+        setCompanionMsg("Debt free! Consider boosting your investments?");
+        setCompanionQ({ type: "boost_invest", yes: "Review investments", no: "I'm good" });
+      }
       return;
     }
-    // Emergency fund fully funded
+    // Emergency fund fully funded - context-aware next step
     if (wasEf < 1 && efPct >= 1) {
-      setCompanionMsg("Emergency fund complete! Focus extra on debt?");
-      setCompanionQ({ type: "debt_focus", yes: "Yes, accelerate!", no: "I'll decide later" });
-      setCompanionColor("blue"); setCompanionGlow(true); setCompanionOpen(true);
       addFeed2("Emergency fund fully funded!"); addToast2("Emergency fund complete!");
+      setCompanionColor("blue"); setCompanionGlow(true); setCompanionOpen(true);
+      if (td > 0 && debts.length > 0) {
+        setCompanionMsg("Emergency fund complete! Focus extra on debt payoff?");
+        setCompanionQ({ type: "debt_focus", yes: "Yes, accelerate!", no: "I'll decide later" });
+      } else if (investments.length === 0) {
+        setCompanionMsg("Emergency fund complete! Ready to start investing?");
+        setCompanionQ({ type: "invest_start", yes: "Yes, let's learn!", no: "Not yet" });
+      } else {
+        setCompanionMsg("Emergency fund complete! Consider increasing investments?");
+        setCompanionQ({ type: "boost_invest", yes: "Review investments", no: "I'm good" });
+      }
       return;
     }
     // Single debt paid off (any debt balance hits 0)
     if (wasTd > td && debts.some(d => d.balance === 0 && d.originalBalance > 0)) {
       setCompanionMsg("A debt is fully paid off! Keep this momentum going.");
       setCompanionColor("gold"); setCompanionGlow(true);
+      setTimeout(() => { setCompanionGlow(false); setCompanionColor("green"); }, 4000);
+      return;
+    }
+    // First investment added
+    if (investments.length > 0 && !companionQ) {
+      var wasInvesting = prevTdRef.current !== undefined;
+    }
+    // (cashflow prompt removed - too eager on initial load)
+    // Emergency fund half
+    if (wasEf < 0.5 && efPct >= 0.5 && efPct < 1) {
+      setCompanionMsg("Emergency fund is 50% funded! Huge milestone.");
+      setCompanionColor("blue"); setCompanionGlow(true);
+      addFeed2("Emergency fund halfway!"); addToast2("50% emergency fund funded!");
       setTimeout(() => { setCompanionGlow(false); setCompanionColor("green"); }, 4000);
       return;
     }
@@ -2083,16 +2209,60 @@ export default function FinancialPlanner() {
     if (!companionQ) return;
     if (companionQ.type === "invest_start") {
       if (answer === "yes") { setCompanionMsg("Let's learn first! Head to the Learn page."); setTab("learn"); }
-      else { setCompanionMsg("No problem. Check Learn when you're ready."); }
+      else { setCompanionMsg("No problem. Check Learn page when you're curious."); }
     } else if (companionQ.type === "debt_focus") {
       if (answer === "yes") { setCompanionMsg("Great! Head to Debt page to increase payments."); setTab("debt"); }
       else { setCompanionMsg("Sounds good. Your plan stays on track."); }
+    } else if (companionQ.type === "emergency_next") {
+      if (answer === "yes") { setCompanionMsg("Smart choice! Head to emergency fund."); setTab("emergency"); }
+      else { setCompanionMsg("No rush. Your system keeps working."); }
+    } else if (companionQ.type === "review_budget") {
+      if (answer === "yes") { setCompanionMsg("Let's optimize! Head to budget."); setTab("budget"); }
+      else { setCompanionMsg("All good. Come back anytime."); }
+    } else if (companionQ.type === "boost_invest") {
+      if (answer === "yes") { setCompanionMsg("Great choice! Check your investments."); setTab("investments"); }
+      else { setCompanionMsg("No rush. Your portfolio keeps growing."); }
+    } else if (companionQ.type === "nav_page") {
+      if (answer === "yes") { setTab(companionQ.page); flashTab(companionQ.page); setCompanionMsg("Here you go! Take a look around."); }
+      else { setCompanionMsg("No worries. Ask anytime you need help."); }
+    } else if (companionQ.type === "setup_flow") {
+      if (answer === "yes") { setTab(companionQ.page); flashTab(companionQ.page); setCompanionMsg("Go ahead and fill this in. I will check when you are done."); }
+      else {
+        var step = setupSteps[setupFlowStep];
+        if (step && step.skip) { setCompanionMsg(step.skip); }
+        if (setupFlowStep < 3) { setSetupFlow(null); setCompanionMsg("No problem. Ask anytime to continue setup."); }
+        else { setSetupOverrides(function(p) { var n = {}; for (var k in p) n[k] = p[k]; if (setupFlowStep === 3) n["debt"] = true; if (setupFlowStep === 4) n["saving_skip"] = true; if (setupFlowStep === 5) n["bills_skip"] = true; return n; }); setTimeout(function() { advanceSetupFlow(); }, 500); }
+      }
     }
     setCompanionQ(null);
+    setCompanionColor("green");
     setTimeout(() => setCompanionGlow(false), 2000);
   };
-  const momStreak = 3;
-  const momData = momStreak >= 7 ? {label:"Building",color:"#fbbf24"} : momStreak >= 3 ? {label:"Growing",color:"#34d399"} : {label:"Ready",color:"#475569"};
+  // Momentum: tracks real days via computer calendar
+  const [momData2, setMomData2] = useState(() => {
+    var now = new Date();
+    var dayOfWeek = now.getDay() || 7; // Mon=1..Sun=7
+    return { lastActive: now.toDateString(), streak: dayOfWeek, weekCount: 1 };
+  });
+  useEffect(() => {
+    var now = new Date();
+    var today = now.toDateString();
+    if (momData2.lastActive !== today) {
+      var last = new Date(momData2.lastActive);
+      var diff = Math.floor((now - last) / 86400000);
+      if (diff === 1) {
+        setMomData2({ lastActive: today, streak: momData2.streak + 1, weekCount: momData2.streak >= 7 ? momData2.weekCount + 1 : momData2.weekCount });
+      } else if (diff > 1) {
+        setMomData2({ lastActive: today, streak: 1, weekCount: Math.max(0, momData2.weekCount - 1) });
+      }
+    }
+  }, []);
+  var momStreak = momData2.streak;
+  var momWeek = momData2.weekCount;
+  var momDayInWeek = ((momStreak - 1) % 7) + 1;
+  var momBarPct = Math.round((momDayInWeek / 7) * 100);
+  var momBarColor = momWeek >= 4 ? "#a78bfa" : momWeek >= 3 ? "#38bdf8" : momWeek >= 2 ? "#6ee7b7" : momWeek >= 1 ? "#fbbf24" : "#475569";
+  var momFaded = momStreak <= 0;
   const getNextMove2 = () => {
     if (income === 0) return "Set your monthly income to get started";
     if (expenses.length === 0) return "Add your expenses for a clear picture";
@@ -2113,10 +2283,17 @@ export default function FinancialPlanner() {
   const insightText = setupPct<0.6 ? "Building clarity. Each step makes the next easier" : setupPct<1 ? "Almost there. Setup gives full clarity" : finState.level<=1 ? "Past the hardest part. Small actions win" : finState.level===2 ? "Consistency is key now" : finState.level===3 ? "Money working for you. Keep momentum" : "Thinking like someone in control";
   const [altDash, setAltDash] = useState(false);
   const [showHealthBars, setShowHealthBars] = useState(false);
+  const [headerClean, setHeaderClean] = useState(false);
+  const [learnVisited, setLearnVisited] = useState(false);
+  const [companionInput, setCompanionInput] = useState("");
+  const [setupFlow, setSetupFlow] = useState(null);
+  const [setupFlowStep, setSetupFlowStep] = useState(0);
+  const [tabFlash, setTabFlash] = useState(null);
+  const [companionHidden, setCompanionHidden] = useState(false);
   return (
     <div style={{ minHeight:"100vh",background:"#0b0f1a",color:"#e2e8f0",fontFamily:"'DM Sans', sans-serif",position:"relative",overflow:"hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-      <style>{`input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 0 6px rgba(0,0,0,0.3)}input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;border:none}select option{background:#1e293b;color:#e2e8f0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}*{box-sizing:border-box}@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}`}</style>
+      <style>{`input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 0 6px rgba(0,0,0,0.3)}input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;border:none}select option{background:#1e293b;color:#e2e8f0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}*{box-sizing:border-box}@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}@keyframes tabPulse{0%,100%{background:rgba(110,231,183,0.05)}50%{background:rgba(110,231,183,0.25)}}@keyframes shake{0%,100%{transform:translateX(0)}10%{transform:translateX(-5px) rotate(-2deg)}20%{transform:translateX(5px) rotate(2deg)}30%{transform:translateX(-4px) rotate(-1.5deg)}40%{transform:translateX(4px) rotate(1.5deg)}50%{transform:translateX(-3px) rotate(-1deg)}60%{transform:translateX(3px) rotate(1deg)}70%{transform:translateX(-2px)}80%{transform:translateX(2px)}90%{transform:translateX(-1px)}}`}</style>
       <div style={{ position:"fixed",top:-200,right:-200,width:600,height:600,background:"radial-gradient(circle, rgba(110,231,183,0.04) 0%, transparent 70%)",pointerEvents:"none" }} />
       <div style={{ position:"fixed",bottom:-200,left:-200,width:600,height:600,background:"radial-gradient(circle, rgba(167,139,250,0.03) 0%, transparent 70%)",pointerEvents:"none" }} />
 
@@ -2127,6 +2304,7 @@ export default function FinancialPlanner() {
             
             <select value={currency} onChange={e => setCurrency(e.target.value)} style={{ padding:"6px 8px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",color:"#e2e8f0",fontSize:10,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer" }}>{CURRENCIES.map(c => (<option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>))}</select>
             <button onClick={() => setCompactMode(!compactMode)} style={{ padding:"6px 10px",borderRadius:8,background:compactMode?"rgba(167,139,250,0.1)":"rgba(255,255,255,0.04)",border:compactMode?"1px solid rgba(167,139,250,0.2)":"1px solid rgba(255,255,255,0.08)",color:compactMode?"#a78bfa":"#64748b",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap" }}>{compactMode?"Full View":"Lite Mode"}</button>
+            {compactMode&&<div style={{ display:"flex",alignItems:"center",gap:4 }}><span style={{ fontSize:9,color:"#94a3b8" }}>Assistant</span><div onClick={() => setCompanionHidden(!companionHidden)} style={{ width:28,height:14,borderRadius:7,background:companionHidden?"rgba(255,255,255,0.08)":"rgba(110,231,183,0.3)",padding:2,cursor:"pointer",transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:companionHidden?"flex-start":"flex-end" }}><div style={{ width:10,height:10,borderRadius:5,background:companionHidden?"#475569":"#6ee7b7",transition:"all 0.2s" }} /></div></div>}
             <button onClick={() => setCleanMode(!cleanMode)} style={{ padding:"6px 10px",borderRadius:8,background:cleanMode?"rgba(110,231,183,0.12)":"rgba(255,255,255,0.04)",border:cleanMode?"1px solid rgba(110,231,183,0.2)":"1px solid rgba(255,255,255,0.08)",color:cleanMode?"#6ee7b7":"#64748b",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap" }}>{cleanMode?"Clean \u2713":"Clean"}</button>
             <div style={{ textAlign:"right" }}>
               <label style={{ fontSize:10,color:"#475569",textTransform:"uppercase",letterSpacing:1 }}>Monthly Income</label>
@@ -2146,15 +2324,29 @@ export default function FinancialPlanner() {
             <div style={{ padding:"3px 10px",borderRadius:20,background:finState.color+"15",border:"1px solid "+finState.color+"30" }}>
               <span style={{ fontSize:10,fontWeight:700,color:finState.color,textTransform:"uppercase",letterSpacing:1 }}>{finState.label}</span>
             </div>
-            <span style={{ fontSize:10,color:momData.color,fontWeight:600 }}>{momStreak}d streak</span>
+            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+              <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:1 }}>
+                <span style={{ fontSize:10,color:momBarColor,fontWeight:600 }}>{momStreak}d</span>
+                <span style={{ fontSize:7,color:momBarColor,opacity:0.7,textTransform:"uppercase",letterSpacing:0.5 }}>streak</span>
+              </div>
+              <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:1 }}>
+                <div style={{ width:56,height:6,borderRadius:3,background:"rgba(255,255,255,0.06)",overflow:"hidden",position:"relative" }}>
+                  <div style={{ height:"100%",borderRadius:3,background:momFaded?"#475569":momBarColor,width:momBarPct+"%",transition:"width 0.5s ease" }} />
+                </div>
+              </div>
+              {momWeek>1&&<span style={{ fontSize:8,color:momBarColor,fontWeight:700 }}>W{momWeek}</span>}
+            </div>
             {stateTransition&&<div style={{ padding:"2px 8px",borderRadius:6,background:"rgba(110,231,183,0.1)",fontSize:10,color:"#6ee7b7",fontWeight:600 }}>{stateTransition.from} {"→"} {stateTransition.to}</div>}
           </div>
+          <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+            <button onClick={() => setHeaderClean(!headerClean)} style={{ background:headerClean?"rgba(167,139,250,0.08)":"rgba(255,255,255,0.03)",border:headerClean?"1px solid rgba(167,139,250,0.2)":"1px solid rgba(255,255,255,0.08)",borderRadius:6,color:headerClean?"#a78bfa":"#64748b",fontSize:8,padding:"3px 7px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:600 }}>{headerClean?"Show more":"Clean"}</button>
           <div style={{ display:"flex",alignItems:"center",gap:6,cursor:"pointer",padding:"4px 8px",borderRadius:6,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)" }} onClick={() => setShowSetup(!showSetup)}>
             {setupChecks.map((c,i) => (<div key={i} style={{ width:8,height:8,borderRadius:4,background:c.done?"#6ee7b7":"rgba(255,255,255,0.15)",border:c.done?"none":"1px solid rgba(255,255,255,0.25)" }} />))}
             <span style={{ fontSize:9,color:"#94a3b8",fontWeight:600 }}>Setup {setupDone}/{setupChecks.length} {showSetup?"\u25B2":"\u25BC"}</span>
           </div>
+          </div>
         </div>
-        {showSetup&&<div style={{ padding:10,background:"rgba(255,255,255,0.02)",borderRadius:10,border:"1px solid rgba(255,255,255,0.06)" }}>
+        {showSetup&&!headerClean&&<div style={{ padding:10,background:"rgba(255,255,255,0.02)",borderRadius:10,border:"1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ fontSize:10,color:"#64748b",marginBottom:6,fontWeight:600 }}>Setup Checklist</div>
           {setupChecks.map((c,i) => (<div key={i} onClick={() => toggleSetup(c.key)} style={{ display:"flex",alignItems:"center",gap:8,padding:"5px 6px",cursor:"pointer",borderRadius:6,background:c.done?"rgba(110,231,183,0.04)":"transparent",marginBottom:2 }}>
             <div style={{ width:16,height:16,borderRadius:4,border:c.done?"2px solid #6ee7b7":"2px solid rgba(255,255,255,0.2)",background:c.done?"#6ee7b7":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#0b0f1a",flexShrink:0,fontWeight:700 }}>{c.done&&"\u2713"}</div>
@@ -2164,18 +2356,18 @@ export default function FinancialPlanner() {
         <div style={{ height:4,borderRadius:2,background:"rgba(255,255,255,0.06)",overflow:"hidden" }}>
           <div style={{ height:"100%",borderRadius:2,background:"linear-gradient(90deg, "+finState.color+"80, "+finState.color+")",width:progressScore+"%",transition:"width 0.8s ease" }} />
         </div>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",gap:12 }}>
+        {!headerClean&&<div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",gap:12 }}>
           <div style={{ fontSize:10,color:"#94a3b8" }}>{finState.label} · Progress: {progressScore}%</div>
           <div style={{ padding:"6px 14px",borderRadius:10,background:"rgba(110,231,183,0.04)",border:"1px solid rgba(110,231,183,0.1)",maxWidth:280 }}>
             <div style={{ fontSize:8,color:"#6ee7b7",fontWeight:700,textTransform:"uppercase",letterSpacing:1 }}>Next Best Move</div>
             <div style={{ fontSize:10,color:"#e2e8f0",lineHeight:1.3 }}>{nextMove.text}</div>
           </div>
-        </div>
-        <div style={{ fontSize:10,color:"#64748b" }}>{"\uD83D\uDCA1"} <span style={{ color:"#94a3b8",fontStyle:"italic" }}>{insightText}</span></div>
-        {feedItems.length>0&&<div style={{ fontSize:10,color:"#94a3b8",padding:"4px 10px",borderRadius:6,background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)" }}>{feedItems[0].text}</div>}
+        </div>}
+        {!headerClean&&<div style={{ padding:"6px 12px",borderRadius:8,background:"rgba(56,189,248,0.04)",border:"1px solid rgba(56,189,248,0.08)" }}><span style={{ fontSize:11,color:"#38bdf8",fontWeight:500 }}>{"\uD83D\uDCA1"} {insightText}</span></div>}
+        {!headerClean&&feedItems.length>0&&<div style={{ fontSize:10,color:"#94a3b8",padding:"4px 10px",borderRadius:6,background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)" }}>{feedItems[0].text}</div>}
       </div>
       <div style={{ display:"flex",gap:2,padding:"12px 32px",borderBottom:"1px solid rgba(255,255,255,0.04)",overflowX:"auto" }}>
-        {(compactMode ? TABS.filter(t => ["dashboard","expenses","debt","savings"].includes(t.id)) : TABS).filter(t => !t.secret || academyUnlocked).map(t => (<button key={t.id} onClick={() => setTab(t.id)} style={{ padding:"10px 18px",borderRadius:10,border:"none",background:tab===t.id?"rgba(110,231,183,0.1)":"transparent",color:tab===t.id?"#6ee7b7":"#64748b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",transition:"all 0.2s",display:"flex",alignItems:"center",gap:6 }}><span style={{ fontSize:14 }}>{t.icon}</span>{t.label}</button>))}
+        {(compactMode ? TABS.filter(t => ["dashboard","expenses","debt","savings"].includes(t.id)) : TABS).filter(t => !t.secret || academyUnlocked).map(t => (<button key={t.id} onClick={() => setTab(t.id)} style={{ padding:"10px 18px",borderRadius:10,border:"none",background:tab===t.id?"rgba(110,231,183,0.1)":tabFlash===t.id?"rgba(110,231,183,0.15)":"transparent",animation:tabFlash===t.id?"tabPulse 0.6s ease 3":"none",color:tab===t.id?"#6ee7b7":"#64748b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",transition:"all 0.2s",display:"flex",alignItems:"center",gap:6 }}><span style={{ fontSize:14 }}>{t.icon}</span>{t.label}</button>))}
       </div>
 
       <div style={{ padding:"24px 32px",maxWidth:1200,margin:"0 auto" }}>
@@ -2187,15 +2379,15 @@ export default function FinancialPlanner() {
         {tab==="savings"&&<SavingsGoals savings={savings} setSavings={setSavings} income={income} expenses={expenses} emergency={emergency} cleanMode={cleanMode} />}
         {tab==="invest"&&<Investments investments={investments} setInvestments={setInvestments} cleanMode={cleanMode} />}
         {tab==="tips"&&<TipsAdvice income={income} expenses={expenses} debts={debts} savings={savings} emergency={emergency} investments={investments} cleanMode={cleanMode} />}
-        {tab==="learn"&&<Learn onAcademyUnlock={() => setAcademyUnlocked(true)} academyUnlocked={academyUnlocked} cleanMode={cleanMode} />}
+        {tab==="learn"&&<Learn onAcademyUnlock={() => setAcademyUnlocked(true)} academyUnlocked={academyUnlocked} cleanMode={cleanMode} onQuizComplete={(info) => { setCompanionColor("purple"); setCompanionGlow(true); if (info.remaining > 0) { var msg = "Quiz done! " + info.pct + "% score. " + info.remaining + " more quiz" + (info.remaining>1?"zes":"") + " before next level. Keep going!"; setCompanionMsg(msg); addToast2(msg); } else if (info.leveledUp) { var msg2 = "Level unlocked! You are moving up. Try the next level!"; setCompanionMsg(msg2); addToast2(msg2); } else { var msg3 = "Quiz done! " + info.pct + "% score. Review and try again for 70%+ to level up!"; setCompanionMsg(msg3); addToast2(msg3); } setTimeout(() => { setCompanionGlow(false); setCompanionColor("green"); setCompanionMsg("Tracking your progress. Keep going!"); }, 8000); }} />}
         {tab==="academy"&&academyUnlocked&&<InvestingAcademy income={income} expenses={expenses} debts={debts} savings={savings} emergency={emergency} investments={investments} cleanMode={cleanMode} />}
       </div>
 
       <div style={{ position:"fixed",top:16,right:16,zIndex:100,display:"flex",flexDirection:"column",gap:8 }}>
         {smartToasts.map(t => (<div key={t.id} style={{ padding:"14px 20px",borderRadius:12,background:"rgba(15,23,42,0.97)",border:"1px solid rgba(110,231,183,0.25)",backdropFilter:"blur(20px)",fontSize:12,color:"#6ee7b7",maxWidth:320,boxShadow:"0 4px 24px rgba(0,0,0,0.4)",animation:"slideIn 0.3s ease",fontWeight:500 }}>{"\u2728"} {t.msg}</div>))}
       </div>
-      <div style={{ position:"fixed",bottom:20,right:20,zIndex:80 }}>
-        {!companionOpen?<button onClick={() => setCompanionOpen(true)} style={{ padding:"10px 16px",borderRadius:14,background:companionGlow?(companionColor==="gold"?"linear-gradient(135deg,rgba(251,191,36,0.25),rgba(251,191,36,0.15))":companionColor==="blue"?"linear-gradient(135deg,rgba(56,189,248,0.25),rgba(56,189,248,0.15))":companionColor==="purple"?"linear-gradient(135deg,rgba(167,139,250,0.25),rgba(167,139,250,0.15))":"linear-gradient(135deg,rgba(110,231,183,0.25),rgba(167,139,250,0.2))"):"linear-gradient(135deg,rgba(110,231,183,0.1),rgba(167,139,250,0.1))",border:companionGlow?(companionColor==="gold"?"1px solid rgba(251,191,36,0.6)":companionColor==="blue"?"1px solid rgba(56,189,248,0.6)":companionColor==="purple"?"1px solid rgba(167,139,250,0.6)":"1px solid rgba(110,231,183,0.5)"):"1px solid rgba(110,231,183,0.2)",color:"#e2e8f0",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",backdropFilter:"blur(20px)",display:"flex",alignItems:"center",gap:8,boxShadow:companionGlow?(companionColor==="gold"?"0 0 24px rgba(251,191,36,0.2)":companionColor==="blue"?"0 0 24px rgba(56,189,248,0.2)":companionColor==="purple"?"0 0 24px rgba(167,139,250,0.2)":"0 0 24px rgba(110,231,183,0.2)"):"0 4px 20px rgba(0,0,0,0.3)",transition:"all 0.3s" }}>
+      {!companionHidden&&<div style={{ position:"fixed",bottom:20,right:20,zIndex:80 }}>
+        {!companionOpen?<button onClick={() => setCompanionOpen(true)} style={{ padding:"10px 16px",borderRadius:14,background:companionGlow?(companionColor==="gold"?"linear-gradient(135deg,rgba(251,191,36,0.25),rgba(251,191,36,0.15))":companionColor==="blue"?"linear-gradient(135deg,rgba(56,189,248,0.25),rgba(56,189,248,0.15))":companionColor==="purple"?"linear-gradient(135deg,rgba(167,139,250,0.25),rgba(167,139,250,0.15))":"linear-gradient(135deg,rgba(110,231,183,0.25),rgba(167,139,250,0.2))"):"linear-gradient(135deg,rgba(110,231,183,0.1),rgba(167,139,250,0.1))",border:companionGlow?(companionColor==="gold"?"1px solid rgba(251,191,36,0.6)":companionColor==="blue"?"1px solid rgba(56,189,248,0.6)":companionColor==="purple"?"1px solid rgba(167,139,250,0.6)":"1px solid rgba(110,231,183,0.5)"):"1px solid rgba(110,231,183,0.2)",color:"#e2e8f0",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",backdropFilter:"blur(20px)",display:"flex",alignItems:"center",gap:8,boxShadow:companionGlow?(companionColor==="gold"?"0 0 24px rgba(251,191,36,0.2)":companionColor==="blue"?"0 0 24px rgba(56,189,248,0.2)":companionColor==="purple"?"0 0 24px rgba(167,139,250,0.2)":"0 0 24px rgba(110,231,183,0.2)"):"0 4px 20px rgba(0,0,0,0.3)",transition:"all 0.3s",animation:(companionGlow&&companionVibrate)?"shake 0.6s ease 2":"none" }}>
           <span style={{ fontSize:14 }}>{"\u2728"}</span><div><div style={{ fontWeight:700,fontSize:10,color:"#6ee7b7" }}>Smart Companion</div><div style={{ fontSize:10,color:companionQ?"#6ee7b7":"#94a3b8",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{companionQ?"Tap to answer":companionMsg}</div></div>
         </button>
         :<div style={{ width:300,borderRadius:16,background:"rgba(15,23,42,0.98)",border:"1px solid rgba(110,231,183,0.15)",backdropFilter:"blur(30px)",boxShadow:"0 8px 40px rgba(0,0,0,0.5)" }}>
@@ -2209,14 +2401,22 @@ export default function FinancialPlanner() {
               <button onClick={() => handleCompanionAnswer("yes")} style={{ flex:1,padding:"6px 10px",borderRadius:8,background:"rgba(110,231,183,0.1)",border:"1px solid rgba(110,231,183,0.2)",color:"#6ee7b7",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif" }}>{companionQ.yes}</button>
               <button onClick={() => handleCompanionAnswer("no")} style={{ flex:1,padding:"6px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",color:"#94a3b8",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif" }}>{companionQ.no}</button>
             </div>}
-            <div style={{ fontSize:9,color:"#64748b",textTransform:"uppercase",letterSpacing:1,marginBottom:6 }}>Recent Updates</div>
+            <div style={{ padding:"8px 10px",background:"rgba(56,189,248,0.04)",borderRadius:6,marginBottom:10,border:"1px solid rgba(56,189,248,0.08)" }}>
+              <div style={{ fontSize:8,color:"#38bdf8",fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:2 }}>Fact of the day</div>
+              <div style={{ fontSize:10,color:"#94a3b8",lineHeight:1.4 }}>{todayFact}</div>
+            </div>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}><div style={{ fontSize:9,color:"#64748b",textTransform:"uppercase",letterSpacing:1 }}>Recent Updates</div><div style={{ display:"flex",alignItems:"center",gap:4,cursor:"pointer" }} onClick={() => setCompanionVibrate(!companionVibrate)}><div style={{ width:24,height:14,borderRadius:7,background:companionVibrate?"rgba(110,231,183,0.3)":"rgba(255,255,255,0.08)",padding:2,transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:companionVibrate?"flex-end":"flex-start" }}><div style={{ width:10,height:10,borderRadius:5,background:companionVibrate?"#6ee7b7":"#475569",transition:"all 0.2s" }} /></div><span style={{ fontSize:8,color:companionVibrate?"#6ee7b7":"#475569" }}>Vibrate</span></div></div>
             <div style={{ maxHeight:120,overflowY:"auto" }}>
               {feedItems.length===0&&<div style={{ fontSize:10,color:"#475569",padding:8 }}>No updates yet</div>}
               {feedItems.slice(0,3).map((f,i) => (<div key={f.ts} style={{ fontSize:10,color:"#94a3b8",padding:"4px 0",borderBottom:"1px solid rgba(255,255,255,0.03)" }}>{f.text}</div>))}
             </div>
+            <div style={{ marginTop:8,display:"flex",gap:4 }}>
+              <input type="text" value={companionInput} onChange={e => setCompanionInput(e.target.value)} onKeyDown={e => { if (e.key==="Enter") handleCompanionAsk(); }} placeholder="Ask me anything..." style={{ flex:1,padding:"6px 10px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",color:"#e2e8f0",fontSize:10,fontFamily:"'DM Sans',sans-serif",outline:"none" }} />
+              <button onClick={handleCompanionAsk} style={{ padding:"6px 10px",borderRadius:8,background:"rgba(110,231,183,0.1)",border:"1px solid rgba(110,231,183,0.2)",color:"#6ee7b7",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif" }}>Ask</button>
+            </div>
           </div>
         </div>}
-      </div>
+      </div>}
       {toasts.map(toast => (<MilestoneToast key={toast.ts} milestone={toast} onClose={() => setToasts(prev => prev.filter(t => t.ts!==toast.ts))} />))}
     </div>
   );
