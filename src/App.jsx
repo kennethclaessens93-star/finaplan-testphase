@@ -385,6 +385,7 @@ function DebtPayoff({ debts, setDebts, bills, setBills, compactMode, cleanMode, 
   useEffect(() => { const t = setTimeout(() => setDebouncedExtra(extra), 150); return () => clearTimeout(t); }, [extra]);
   const [nd, setNd] = useState({ name:"",balance:0,rate:0,minPayment:0 });
   const [view, setView] = useState("unified"); // unified | bills | calendar
+  useEffect(() => { var h = (e) => { if(e.detail) setView(e.detail); }; window.addEventListener("debtSetView",h); return () => window.removeEventListener("debtSetView",h); }, []);
 
   const [nb, setNb] = useState({ name:"",amount:0,sentDate:"",dueDate:"",urgency:1 });
   const [showAddBill, setShowAddBill] = useState(false);
@@ -396,7 +397,7 @@ function DebtPayoff({ debts, setDebts, bills, setBills, compactMode, cleanMode, 
   const rmDebt = id => setDebts(debts.filter(d => d.id!==id));
 
   // Bill CRUD
-  const addBill = () => { if(!nb.name||!nb.amount) return; setBills([...bills,{...nb,id:Date.now(),paid:false}]); setNb({name:"",amount:0,sentDate:"",dueDate:"",urgency:1}); setShowAddBill(false); };
+  const addBill = () => { if(!nb.name||!nb.amount||!nb.dueDate) return; setBills([...bills,{...nb,id:Date.now(),paid:false}]); setNb({name:"",amount:0,sentDate:"",dueDate:"",urgency:1}); setShowAddBill(false); };
   const rmBill = id => setBills(bills.filter(b => b.id!==id));
   const markPaid = id => setBills(prev => prev.filter(b => b.id!==id));
 
@@ -942,8 +943,8 @@ function DebtPayoff({ debts, setDebts, bills, setBills, compactMode, cleanMode, 
 // ═══ SAVINGS & HYSA COMPARISON ═══
 function SavingsGoals({ savings, setSavings, income, expenses, emergency, cleanMode }) {
   const [ng, setNg] = useState({ name:"",target:0,saved:0,monthly:0,icon:"🎯" });
-  const [hr, setHr] = useState(4.5); const [rr, setRr] = useState(0.5);
-  const [hd, setHd] = useState(10000); const [hm, setHm] = useState(500);
+  const [hr, setHr] = useState(0); const [rr, setRr] = useState(0);
+  const [hd, setHd] = useState(0); const [hm, setHm] = useState(0);
   const [showEF, setShowEF] = useState(false);
   const icons = ["🎯","🏠","✈️","🚗","📚","💍","🎓","💻","🏖️","🎸"];
   const add = () => { if(!ng.name||!ng.target) return; setSavings([...savings,{...ng,id:Date.now()}]); setNg({name:"",target:0,saved:0,monthly:0,icon:"🎯"}); };
@@ -1940,28 +1941,33 @@ export default function FinancialPlanner() {
   const liteTabs = ["dashboard","expenses","debt","savings"];
   const flashTab = (tabId) => { setTabFlash(tabId); setTimeout(() => setTabFlash(null), 2500); };
   const setupSteps = [
-    { check: () => income > 0, page: "dashboard", msg: "First, set your monthly income.", done: "Income set! Ready for expenses?" },
-    { check: () => expenses.length > 0, page: "expenses", msg: "Now add your monthly expenses.", done: "Expenses added! Set up your emergency fund?" },
-    { check: () => emergency.target > 0, page: "emergency", msg: "Set your emergency fund target.", done: "Emergency fund started! Any debts to track?" },
-    { check: () => debts.length > 0 || setupOverrides["debt"], page: "debt", msg: "Add any debts you want to pay off.", done: "Debt plan active! Any savings goals?", skip: "No debt? Lucky you! Any savings goals?" },
-    { check: () => savings.length > 0 || setupOverrides["saving_skip"], page: "savings", msg: "Add your savings goals.", done: "Savings set! Any bills to track?", skip: "No goals yet? That is fine! Any bills?" },
-    { check: () => bills.length > 0 || setupOverrides["bills_skip"], page: "debt", msg: "Add any bills in your debt section.", done: "All set!" },
+    { check: () => income > 0, page: "dashboard", msg: "Let's start! Enter your monthly income above.", done: "Income set! Ready to add expenses?" },
+    { check: () => expenses.length > 0, page: "expenses", msg: "Now add your monthly expenses.", done: "Expenses added! Let's set up your emergency fund." },
+    { check: () => emergency.target > 0, page: "emergency", msg: "Set your emergency fund target and contribution.", done: "Emergency fund started! Any debts or loans to track?" },
+    { check: () => debts.length > 0 || setupOverrides["debt"], page: "debt", msg: "Add any debts or loans you want to pay off.", done: "Debt plan active! Any bills or fines to add?", skip: "No debts or loans? Great! Any bills or fines?" },
+    { check: () => bills.length > 0 || setupOverrides["bills_skip"], page: "debt_bills", msg: "Add any outstanding bills or fines.", done: "Bills added! Want to sync to your calendar?", skip: "No bills? Moving on to savings goals." },
+    { check: () => calendarEnabled || setupOverrides["cal_skip"], page: "debt_calendar", msg: "Sync your payments to Google Calendar?", skip: "No problem! Let's set savings goals." },
+    { check: () => savings.length > 0 || setupOverrides["saving_skip"], page: "savings", msg: "Add your savings goals.", done: "Savings set!", skip: "No goals yet? That is fine!" },
   ];
   const advanceSetupFlow = () => {
     if (!setupFlow) return;
     var step = setupFlowStep;
     while (step < setupSteps.length && setupSteps[step].check()) step++;
     if (step >= setupSteps.length) {
-      setCompanionMsg("Initial setup complete! Your financial picture is clear.");
+      setCompanionMsg("Initial setup complete! Your full overview is in the Dashboard.");
       setCompanionColor("purple"); setCompanionGlow(true); addToast2("Setup complete!");
+      addFeed2("Initial setup complete!");
+      flashTab("dashboard");
+      setTimeout(() => { setTab("dashboard"); }, 1500);
       setSetupFlow(null); setSetupFlowStep(0);
-      setTimeout(() => { setCompanionGlow(false); setCompanionColor("green"); setCompanionMsg("Tracking your progress. Keep going!"); }, 6000);
+      setTimeout(() => { setCompanionGlow(false); setCompanionColor("green"); setCompanionMsg("Tracking your progress. Ask me what to do next!"); }, 6000);
       return;
     }
     setSetupFlowStep(step);
-    setCompanionMsg(setupSteps[step].msg);
-    setCompanionQ({ type:"setup_flow", page:setupSteps[step].page, yes:"Show me", no:step < 3 ? "Not now" : "Skip" });
-    setCompanionGlow(true); setTimeout(() => setCompanionGlow(false), 3000);
+    var s = setupSteps[step];
+    setCompanionMsg(s.msg);
+    var noLabel = step <= 2 ? "Not now" : step === 3 ? "No debts or loans" : "Skip";
+    setCompanionQ({ type:"setup_flow", page:s.page, yes:"Show me", no:noLabel });
   };
   useEffect(() => {
     if (!setupFlow || !initialized.current) return;
@@ -1972,14 +1978,25 @@ export default function FinancialPlanner() {
       setCompanionColor("green"); setCompanionGlow(true);
       setTimeout(() => { setCompanionGlow(false); advanceSetupFlow(); }, 2000);
     }
-  }, [income, expenses.length, emergency.target, debts.length, savings.length, bills.length]);
+  }, [income, expenses.length, emergency.target, debts.length, savings.length, bills.length, calendarEnabled]);
   const handleCompanionAsk = () => {
     var q = companionInput.toLowerCase().trim();
     setCompanionInput("");
     if (!q) return;
     if (q.includes("help") || q.includes("setup") || q.includes("start") || q.includes("what do i do") || q.includes("next") || q.includes("what now") || q.includes("guide")) {
-      setSetupFlow(true);
-      advanceSetupFlow();
+      var allSetup = income > 0 && expenses.length > 0 && emergency.target > 0;
+      if (!allSetup) { setSetupFlow(true); advanceSetupFlow(); }
+      else {
+        var nm2 = getNextMove2();
+        setCompanionMsg(nm2);
+        var pg2 = "dashboard";
+        if (nm2.includes("expense") || nm2.includes("trim")) pg2 = "expenses";
+        else if (nm2.includes("emergency") || nm2.includes("fund")) pg2 = "emergency";
+        else if (nm2.includes("debt") || nm2.includes("loan") || nm2.includes("paying")) pg2 = "debt";
+        else if (nm2.includes("invest")) pg2 = "investments";
+        setCompanionQ({ type:"nav_page", page:pg2, yes:"Show me", no:"I'm good" });
+        setCompanionGlow(true); setTimeout(function() { setCompanionGlow(false); }, 3000);
+      }
     } else if (q.includes("invest")) {
       setCompanionMsg("Investing grows your wealth over time. Want to learn more?"); setCompanionQ({ type:"nav_page", page:"learn", yes:"Teach me", no:"Not now" });
     } else if (q.includes("debt") || q.includes("loan")) {
@@ -2006,6 +2023,8 @@ export default function FinancialPlanner() {
     }
   }, [tab]);
   const [cleanMode, setCleanMode] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [welcomeChecked, setWelcomeChecked] = useState(false);
   const [currency, setCurrency] = useState("USD");
   const [budgetPreset, setBudgetPreset] = useState("50/30/20");
   const [academyUnlocked, setAcademyUnlocked] = useState(true);
@@ -2226,12 +2245,17 @@ export default function FinancialPlanner() {
       if (answer === "yes") { setTab(companionQ.page); flashTab(companionQ.page); setCompanionMsg("Here you go! Take a look around."); }
       else { setCompanionMsg("No worries. Ask anytime you need help."); }
     } else if (companionQ.type === "setup_flow") {
-      if (answer === "yes") { setTab(companionQ.page); flashTab(companionQ.page); setCompanionMsg("Go ahead and fill this in. I will check when you are done."); }
-      else {
-        var step = setupSteps[setupFlowStep];
-        if (step && step.skip) { setCompanionMsg(step.skip); }
+      if (answer === "yes") {
+        var pg = companionQ.page;
+        if (pg === "debt_bills") { setTab("debt"); flashTab("debt"); setTimeout(function() { window.dispatchEvent(new CustomEvent("debtSetView",{detail:"bills"})); }, 600); }
+        else if (pg === "debt_calendar") { setTab("debt"); flashTab("debt"); setTimeout(function() { window.dispatchEvent(new CustomEvent("debtSetView",{detail:"calendar"})); }, 600); }
+        else { setTab(pg); flashTab(pg); }
+        setCompanionMsg("Go ahead and fill this in. I will check when you are done.");
+      } else {
+        var stp2 = setupSteps[setupFlowStep];
+        if (stp2 && stp2.skip) setCompanionMsg(stp2.skip);
         if (setupFlowStep < 3) { setSetupFlow(null); setCompanionMsg("No problem. Ask anytime to continue setup."); }
-        else { setSetupOverrides(function(p) { var n = {}; for (var k in p) n[k] = p[k]; if (setupFlowStep === 3) n["debt"] = true; if (setupFlowStep === 4) n["saving_skip"] = true; if (setupFlowStep === 5) n["bills_skip"] = true; return n; }); setTimeout(function() { advanceSetupFlow(); }, 500); }
+        else { setSetupOverrides(function(p) { var n = {}; for (var k in p) n[k] = p[k]; if (setupFlowStep === 3) n["debt"] = true; if (setupFlowStep === 4) n["bills_skip"] = true; if (setupFlowStep === 5) n["cal_skip"] = true; if (setupFlowStep === 6) n["saving_skip"] = true; return n; }); setTimeout(function() { advanceSetupFlow(); }, 500); }
       }
     }
     setCompanionQ(null);
@@ -2283,7 +2307,7 @@ export default function FinancialPlanner() {
   const insightText = setupPct<0.6 ? "Building clarity. Each step makes the next easier" : setupPct<1 ? "Almost there. Setup gives full clarity" : finState.level<=1 ? "Past the hardest part. Small actions win" : finState.level===2 ? "Consistency is key now" : finState.level===3 ? "Money working for you. Keep momentum" : "Thinking like someone in control";
   const [altDash, setAltDash] = useState(false);
   const [showHealthBars, setShowHealthBars] = useState(false);
-  const [headerClean, setHeaderClean] = useState(false);
+  const [headerClean, setHeaderClean] = useState(true);
   const [learnVisited, setLearnVisited] = useState(false);
   const [companionInput, setCompanionInput] = useState("");
   const [setupFlow, setSetupFlow] = useState(null);
@@ -2293,7 +2317,7 @@ export default function FinancialPlanner() {
   return (
     <div style={{ minHeight:"100vh",background:"#0b0f1a",color:"#e2e8f0",fontFamily:"'DM Sans', sans-serif",position:"relative",overflow:"hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-      <style>{`input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 0 6px rgba(0,0,0,0.3)}input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;border:none}select option{background:#1e293b;color:#e2e8f0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}*{box-sizing:border-box}@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}@keyframes tabPulse{0%,100%{background:rgba(110,231,183,0.05)}50%{background:rgba(110,231,183,0.25)}}@keyframes shake{0%,100%{transform:translateX(0)}10%{transform:translateX(-5px) rotate(-2deg)}20%{transform:translateX(5px) rotate(2deg)}30%{transform:translateX(-4px) rotate(-1.5deg)}40%{transform:translateX(4px) rotate(1.5deg)}50%{transform:translateX(-3px) rotate(-1deg)}60%{transform:translateX(3px) rotate(1deg)}70%{transform:translateX(-2px)}80%{transform:translateX(2px)}90%{transform:translateX(-1px)}}`}</style>
+      <style>{`input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 0 6px rgba(0,0,0,0.3)}input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;border:none}select option{background:#1e293b;color:#e2e8f0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}*{box-sizing:border-box}@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}@keyframes companionPulse{0%,100%{opacity:1}50%{opacity:0.4}}@keyframes tabPulse{0%,100%{background:rgba(110,231,183,0.05)}50%{background:rgba(110,231,183,0.25)}}@keyframes shake{0%,100%{transform:translateX(0)}10%{transform:translateX(-5px) rotate(-2deg)}20%{transform:translateX(5px) rotate(2deg)}30%{transform:translateX(-4px) rotate(-1.5deg)}40%{transform:translateX(4px) rotate(1.5deg)}50%{transform:translateX(-3px) rotate(-1deg)}60%{transform:translateX(3px) rotate(1deg)}70%{transform:translateX(-2px)}80%{transform:translateX(2px)}90%{transform:translateX(-1px)}}`}</style>
       <div style={{ position:"fixed",top:-200,right:-200,width:600,height:600,background:"radial-gradient(circle, rgba(110,231,183,0.04) 0%, transparent 70%)",pointerEvents:"none" }} />
       <div style={{ position:"fixed",bottom:-200,left:-200,width:600,height:600,background:"radial-gradient(circle, rgba(167,139,250,0.03) 0%, transparent 70%)",pointerEvents:"none" }} />
 
@@ -2304,8 +2328,8 @@ export default function FinancialPlanner() {
             
             <select value={currency} onChange={e => setCurrency(e.target.value)} style={{ padding:"6px 8px",borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",color:"#e2e8f0",fontSize:10,fontFamily:"'DM Sans',sans-serif",outline:"none",cursor:"pointer" }}>{CURRENCIES.map(c => (<option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>))}</select>
             <button onClick={() => setCompactMode(!compactMode)} style={{ padding:"6px 10px",borderRadius:8,background:compactMode?"rgba(167,139,250,0.1)":"rgba(255,255,255,0.04)",border:compactMode?"1px solid rgba(167,139,250,0.2)":"1px solid rgba(255,255,255,0.08)",color:compactMode?"#a78bfa":"#64748b",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap" }}>{compactMode?"Full View":"Lite Mode"}</button>
-            {compactMode&&<div style={{ display:"flex",alignItems:"center",gap:4 }}><span style={{ fontSize:9,color:"#94a3b8" }}>Assistant</span><div onClick={() => setCompanionHidden(!companionHidden)} style={{ width:28,height:14,borderRadius:7,background:companionHidden?"rgba(255,255,255,0.08)":"rgba(110,231,183,0.3)",padding:2,cursor:"pointer",transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:companionHidden?"flex-start":"flex-end" }}><div style={{ width:10,height:10,borderRadius:5,background:companionHidden?"#475569":"#6ee7b7",transition:"all 0.2s" }} /></div></div>}
-            <button onClick={() => setCleanMode(!cleanMode)} style={{ padding:"6px 10px",borderRadius:8,background:cleanMode?"rgba(110,231,183,0.12)":"rgba(255,255,255,0.04)",border:cleanMode?"1px solid rgba(110,231,183,0.2)":"1px solid rgba(255,255,255,0.08)",color:cleanMode?"#6ee7b7":"#64748b",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap" }}>{cleanMode?"Clean \u2713":"Clean"}</button>
+                        <button onClick={() => setCleanMode(!cleanMode)} style={{ padding:"6px 10px",borderRadius:8,background:cleanMode?"rgba(110,231,183,0.12)":"rgba(255,255,255,0.04)",border:cleanMode?"1px solid rgba(110,231,183,0.2)":"1px solid rgba(255,255,255,0.08)",color:cleanMode?"#6ee7b7":"#64748b",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap" }}>{cleanMode?"Clean \u2713":"Clean"}</button>
+            <div style={{ display:"flex",alignItems:"center",gap:5 }}><span style={{ fontSize:9,color:"#94a3b8",fontWeight:600 }}>Personal Assistant</span><div onClick={() => setCompanionHidden(!companionHidden)} style={{ width:28,height:14,borderRadius:7,background:companionHidden?"rgba(255,255,255,0.08)":"rgba(110,231,183,0.3)",padding:2,cursor:"pointer",transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:companionHidden?"flex-start":"flex-end" }}><div style={{ width:10,height:10,borderRadius:5,background:companionHidden?"#475569":"#6ee7b7",transition:"all 0.2s" }} /></div></div>
             <div style={{ textAlign:"right" }}>
               <label style={{ fontSize:10,color:"#475569",textTransform:"uppercase",letterSpacing:1 }}>Monthly Income</label>
               <div style={{ position:"relative" }}>
@@ -2346,7 +2370,7 @@ export default function FinancialPlanner() {
           </div>
           </div>
         </div>
-        {showSetup&&!headerClean&&<div style={{ padding:10,background:"rgba(255,255,255,0.02)",borderRadius:10,border:"1px solid rgba(255,255,255,0.06)" }}>
+        {showSetup&&<div style={{ padding:10,background:"rgba(255,255,255,0.02)",borderRadius:10,border:"1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ fontSize:10,color:"#64748b",marginBottom:6,fontWeight:600 }}>Setup Checklist</div>
           {setupChecks.map((c,i) => (<div key={i} onClick={() => toggleSetup(c.key)} style={{ display:"flex",alignItems:"center",gap:8,padding:"5px 6px",cursor:"pointer",borderRadius:6,background:c.done?"rgba(110,231,183,0.04)":"transparent",marginBottom:2 }}>
             <div style={{ width:16,height:16,borderRadius:4,border:c.done?"2px solid #6ee7b7":"2px solid rgba(255,255,255,0.2)",background:c.done?"#6ee7b7":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#0b0f1a",flexShrink:0,fontWeight:700 }}>{c.done&&"\u2713"}</div>
@@ -2387,7 +2411,7 @@ export default function FinancialPlanner() {
         {smartToasts.map(t => (<div key={t.id} style={{ padding:"14px 20px",borderRadius:12,background:"rgba(15,23,42,0.97)",border:"1px solid rgba(110,231,183,0.25)",backdropFilter:"blur(20px)",fontSize:12,color:"#6ee7b7",maxWidth:320,boxShadow:"0 4px 24px rgba(0,0,0,0.4)",animation:"slideIn 0.3s ease",fontWeight:500 }}>{"\u2728"} {t.msg}</div>))}
       </div>
       {!companionHidden&&<div style={{ position:"fixed",bottom:20,right:20,zIndex:80 }}>
-        {!companionOpen?<button onClick={() => setCompanionOpen(true)} style={{ padding:"10px 16px",borderRadius:14,background:companionGlow?(companionColor==="gold"?"linear-gradient(135deg,rgba(251,191,36,0.25),rgba(251,191,36,0.15))":companionColor==="blue"?"linear-gradient(135deg,rgba(56,189,248,0.25),rgba(56,189,248,0.15))":companionColor==="purple"?"linear-gradient(135deg,rgba(167,139,250,0.25),rgba(167,139,250,0.15))":"linear-gradient(135deg,rgba(110,231,183,0.25),rgba(167,139,250,0.2))"):"linear-gradient(135deg,rgba(110,231,183,0.1),rgba(167,139,250,0.1))",border:companionGlow?(companionColor==="gold"?"1px solid rgba(251,191,36,0.6)":companionColor==="blue"?"1px solid rgba(56,189,248,0.6)":companionColor==="purple"?"1px solid rgba(167,139,250,0.6)":"1px solid rgba(110,231,183,0.5)"):"1px solid rgba(110,231,183,0.2)",color:"#e2e8f0",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",backdropFilter:"blur(20px)",display:"flex",alignItems:"center",gap:8,boxShadow:companionGlow?(companionColor==="gold"?"0 0 24px rgba(251,191,36,0.2)":companionColor==="blue"?"0 0 24px rgba(56,189,248,0.2)":companionColor==="purple"?"0 0 24px rgba(167,139,250,0.2)":"0 0 24px rgba(110,231,183,0.2)"):"0 4px 20px rgba(0,0,0,0.3)",transition:"all 0.3s",animation:(companionGlow&&companionVibrate)?"shake 0.6s ease 2":"none" }}>
+        {!companionOpen?<button onClick={() => setCompanionOpen(true)} style={{ padding:"10px 16px",borderRadius:14,background:companionGlow?(companionColor==="gold"?"linear-gradient(135deg,rgba(251,191,36,0.25),rgba(251,191,36,0.15))":companionColor==="blue"?"linear-gradient(135deg,rgba(56,189,248,0.25),rgba(56,189,248,0.15))":companionColor==="purple"?"linear-gradient(135deg,rgba(167,139,250,0.25),rgba(167,139,250,0.15))":"linear-gradient(135deg,rgba(110,231,183,0.25),rgba(167,139,250,0.2))"):"linear-gradient(135deg,rgba(110,231,183,0.1),rgba(167,139,250,0.1))",border:companionGlow?(companionColor==="gold"?"1px solid rgba(251,191,36,0.6)":companionColor==="blue"?"1px solid rgba(56,189,248,0.6)":companionColor==="purple"?"1px solid rgba(167,139,250,0.6)":"1px solid rgba(110,231,183,0.5)"):"1px solid rgba(110,231,183,0.2)",color:"#e2e8f0",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",backdropFilter:"blur(20px)",display:"flex",alignItems:"center",gap:8,boxShadow:companionGlow?(companionColor==="gold"?"0 0 24px rgba(251,191,36,0.2)":companionColor==="blue"?"0 0 24px rgba(56,189,248,0.2)":companionColor==="purple"?"0 0 24px rgba(167,139,250,0.2)":"0 0 24px rgba(110,231,183,0.2)"):"0 4px 20px rgba(0,0,0,0.3)",transition:"all 0.3s",animation:(companionGlow&&companionVibrate)?"shake 0.6s ease 2":companionQ?"companionPulse 1.2s ease-in-out infinite":"none" }}>
           <span style={{ fontSize:14 }}>{"\u2728"}</span><div><div style={{ fontWeight:700,fontSize:10,color:"#6ee7b7" }}>Smart Companion</div><div style={{ fontSize:10,color:companionQ?"#6ee7b7":"#94a3b8",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{companionQ?"Tap to answer":companionMsg}</div></div>
         </button>
         :<div style={{ width:300,borderRadius:16,background:"rgba(15,23,42,0.98)",border:"1px solid rgba(110,231,183,0.15)",backdropFilter:"blur(30px)",boxShadow:"0 8px 40px rgba(0,0,0,0.5)" }}>
@@ -2416,6 +2440,28 @@ export default function FinancialPlanner() {
             </div>
           </div>
         </div>}
+      </div>}
+      {showWelcome&&<div style={{ position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(6px)" }}>
+        <div style={{ width:480,maxWidth:"90vw",borderRadius:20,background:"linear-gradient(135deg,#0f172a,#1a1e2e)",border:"1px solid rgba(110,231,183,0.15)",boxShadow:"0 20px 60px rgba(0,0,0,0.6)",padding:"32px 28px",textAlign:"center" }}>
+          <div style={{ fontSize:28,marginBottom:4 }}>{"✨"}</div>
+          <div style={{ fontSize:20,fontWeight:800,color:"#e2e8f0",marginBottom:4 }}>Welcome to Your Financial Planner</div>
+          <div style={{ fontSize:12,color:"#94a3b8",marginBottom:20,lineHeight:1.6 }}>Your personal system for financial clarity and growth.</div>
+          <div style={{ textAlign:"left",marginBottom:20 }}>
+            <div style={{ fontSize:13,fontWeight:700,color:"#6ee7b7",marginBottom:12 }}>How to get started</div>
+            <div style={{ fontSize:12,color:"#cbd5e1",lineHeight:1.8,marginBottom:16 }}>Open the <span style={{ color:"#6ee7b7",fontWeight:600 }}>Smart Companion</span> (bottom right) and type <span style={{ color:"#6ee7b7",fontWeight:600 }}>"help me setup"</span>. It will guide you step by step through your income, expenses, emergency fund, debts, bills, and savings.</div>
+            <div style={{ fontSize:13,fontWeight:700,color:"#a78bfa",marginBottom:10 }}>4 View Modes</div>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+              <div style={{ padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)" }}><div style={{ fontSize:10,fontWeight:700,color:"#e2e8f0" }}>Full View</div><div style={{ fontSize:9,color:"#64748b" }}>Everything visible</div></div>
+              <div style={{ padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)" }}><div style={{ fontSize:10,fontWeight:700,color:"#e2e8f0" }}>Full + Clean</div><div style={{ fontSize:9,color:"#64748b" }}>Slimmer overview</div></div>
+              <div style={{ padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)" }}><div style={{ fontSize:10,fontWeight:700,color:"#e2e8f0" }}>Lite Mode</div><div style={{ fontSize:9,color:"#64748b" }}>Only essentials</div></div>
+              <div style={{ padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)" }}><div style={{ fontSize:10,fontWeight:700,color:"#e2e8f0" }}>Lite + Clean</div><div style={{ fontSize:9,color:"#64748b" }}>Minimal essentials</div></div>
+            </div>
+          </div>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer",padding:"10px 20px",borderRadius:10,background:welcomeChecked?"rgba(110,231,183,0.1)":"rgba(255,255,255,0.03)",border:welcomeChecked?"1px solid rgba(110,231,183,0.2)":"1px solid rgba(255,255,255,0.08)",transition:"all 0.2s" }} onClick={() => { if (!welcomeChecked) setWelcomeChecked(true); else { setShowWelcome(false); setCompanionGlow(true); setTimeout(() => setCompanionGlow(false), 3000); } }}>
+            <div style={{ width:18,height:18,borderRadius:4,border:welcomeChecked?"2px solid #6ee7b7":"2px solid rgba(255,255,255,0.2)",background:welcomeChecked?"#6ee7b7":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#0b0f1a",fontWeight:700 }}>{welcomeChecked&&"✓"}</div>
+            <span style={{ fontSize:12,color:welcomeChecked?"#6ee7b7":"#94a3b8",fontWeight:600 }}>{welcomeChecked?"Click again to start":"Everything clear?"}</span>
+          </div>
+        </div>
       </div>}
       {toasts.map(toast => (<MilestoneToast key={toast.ts} milestone={toast} onClose={() => setToasts(prev => prev.filter(t => t.ts!==toast.ts))} />))}
     </div>
